@@ -55,6 +55,12 @@ dsh plugin --profile desktop add link:<克隆路径>\dsh-net-switch
 dsh plugin --profile desktop add file:<解压路径>\dsh-net-switch-0.1.0.tgz
 ```
 
+预构建 tarball 也挂在 Release 上（无需构建，跳过 `allowBuilds` 构建授权）：
+
+```
+https://github.com/B1aZerr/dsh-net-switch/releases/latest/download/dsh-net-switch.tgz
+```
+
 命令会在 profile 的 `package.json` 里同时登记 `dependencies` 和 `dsh.profile.bundles`。装完：
 
 ```powershell
@@ -226,7 +232,7 @@ CI 的检查顺序：
 3. **仓库创建满 1 天**（用来过滤「提交前几分钟才建好」的仓库）；
 4. `awesome-lint` 与站点构建（双语一致性、日期、截图等）。
 
-另外要在仓库设置里加上 **`dsh-plugin`** topic（列表和多个插件市场都按这个 topic 抓取）。
+另外要在仓库设置里加上 **`dsh-plugin`** topic（列表和多个插件市场都按这个 topic 抓取）。本仓库已加上该 topic，并已发布 `v0.1.0` Release（附预构建 tarball）。
 
 ## License
 
