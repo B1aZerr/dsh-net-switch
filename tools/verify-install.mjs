@@ -14,8 +14,9 @@
  * as a *combo* resource keyed by a revision, and the web surface is behind a
  * per-process launch token that only the desktop shell receives (over IPC). An
  * unauthenticated fetch therefore cannot distinguish "not composed" from "wrong
- * URL". Confirm the rendered pill through the Inspect bridge instead — ask for the
- * `shell.overlay` occupants — or simply look at the top-right corner.
+ * URL". Confirm the rendered chip through the Inspect bridge instead — ask for the
+ * `conversation.session.header.actions` occupants — or simply look at the session
+ * header, right of the mode selector.
  *
  * Usage:  node tools/verify-install.mjs [webUrl]        (default http://127.0.0.1:19387)
  *
@@ -116,13 +117,13 @@ try {
       } else {
         fail('the bundle id does not match the package name')
       }
-      if (source.includes('shell.overlay')) pass('it registers into the shell.overlay seat')
-      else fail('the bundle never mentions shell.overlay')
+      if (source.includes('conversation.session.header.actions')) pass('it registers into the session header action list')
+      else fail('the bundle never mentions conversation.session.header.actions')
       if (client?.inject !== undefined && !Array.isArray(client.inject)) fail('dsh.client.inject must be an array')
     }
   }
-  note('to confirm it rendered, ask the Inspect bridge for the shell.overlay occupants')
-  note('(cordis_inspect_query client Slots listSubTree root=shell.overlay -> registrant dsh-net-switch)')
+  note('to confirm it rendered, ask the Inspect bridge for the session header action list')
+  note('(cordis_inspect_query client Slots listSubTree root=conversation.session.header.actions -> registrant dsh-net-switch, order -5)')
 } catch (error) {
   fail(`browser-half check threw: ${error.message}`)
 }

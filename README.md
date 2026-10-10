@@ -2,13 +2,13 @@
 
 给 DeepSeek Harness 一个**运行时**出网开关：一键在「走本地 Clash Verge 代理」和「直连（含局域网）」之间切换，**不用重启 Harness**。
 
-> **English:** a runtime network switch for DeepSeek Harness. One click flips Harness's own egress — LLM calls, web search/fetch and HTTP MCP traffic, plus the proxy environment of agent shell subprocesses — between a local Clash Verge proxy and direct/LAN, without restarting. Loopback and every private range always stay direct. Driven from a top-right status pill, the `network_mode` agent tool, and the `/net` slash command.
+> **English:** a runtime network switch for DeepSeek Harness. One click flips Harness's own egress — LLM calls, web search/fetch and HTTP MCP traffic, plus the proxy environment of agent shell subprocesses — between a local Clash Verge proxy and direct/LAN, without restarting. Loopback and every private range always stay direct. Driven from a status chip in the session header (immediately right of the mode selector), the `network_mode` agent tool, and the `/net` slash command.
 
 三个入口驱动同一个开关：
 
 | 入口 | 用法 |
 |---|---|
-| **GUI 顶栏小开关** | 窗口右上角一枚状态胶囊：绿点 `代理` / 灰点 `直连` / 琥珀 `代理离线`，点一下即切换 |
+| **GUI 头部小开关** | 会话头部、**紧邻模式选择按钮右侧**的状态胶囊：绿点 `代理` / 灰点 `直连` / 琥珀 `代理离线`，点一下即切换。它注册在 `conversation.session.header.actions`（`order: -5`，正好夹在 `agent-preset` 的 −10 与 `job-list` 的 20 之间），因此是**原生流式排布、随窗口自适应**，不覆盖任何已有控件 |
 | **Agent 工具** | `network_mode`：模型可以自己判断「这个任务需要翻墙」而临时切到 clash，用完切回 lan |
 | **斜杠命令** | `/net clash`、`/net lan`、`/net status` |
 
@@ -67,7 +67,7 @@ https://github.com/B1aZerr/dsh-net-switch/releases/latest/download/dsh-net-switc
 node dsh-net-switch\tools\verify-install.mjs      # 对运行中的 host 自检，见第 5 节
 ```
 
-然后右上角应该出现胶囊（默认 `直连`），点它或打 `/net clash` 即可切换。
+然后**会话头部、模式选择按钮的右侧**应该出现状态胶囊（默认 `直连`），点它或打 `/net clash` 即可切换。
 
 ### 三个安装陷阱（都是本机实测踩到的）
 
@@ -79,14 +79,13 @@ node dsh-net-switch\tools\verify-install.mjs      # 对运行中的 host 自检�
    实测（两处，都通过）：① 在一个**没有本地 `node_modules`、也没有 `DSH_HOME`/`DSH_PROFILE`** 的普通 Node 进程里，加载器解析成功；② 在**运行中的 host 进程**里，把插件目录下的 `node_modules` 整个移除后重载条目，`inProcessRouting` 仍然是 `true`。
    也就是说正常安装**不需要任何额外步骤**。`node tools/link-undici.mjs` 只是给其他环境兜底：它会就地链接 DSH 自带的那份（需要能创建目录联接的权限），或直接 `npm i undici@^7`。
    > 该脚本清理旧链接时用的是 `rmdir`（只摘链接）：Windows 把目录联接报告成普通目录，**递归删除会顺着联接清空 DSH 自己那份 undici**。本机实测已确认链接摘除后 DSH 的 `node_modules/undici`（210 个文件）完好。
-3. **胶囊不能贴在最顶端：桌面壳的窗口标题栏带会把它盖住。**
-   `shell.overlay` 的实际契约是
+3. **不要用浮层（`shell.overlay`）挂这个开关。**
+   最初的版本把胶囊固定在右上角，连着踩了两个坑。`shell.overlay` 的实际契约是
    ```css
    .BynINW_overlayLayer { position: absolute; inset: 0; z-index: 20; pointer-events: none }
-   .BynINW_frame        { position: relative; overflow: hidden }   /* 标题栏带 data-windows-titlebar */
    ```
-   而桌面壳自己的窗口标题栏带（最小化 / 最大化 / 关闭）占据顶部约 40px 并压在它上面 —— 一开始把胶囊放在 `top:10px; right:12px`，正好落在最大化/关闭按钮底下，**屏幕上完全看不见**（但槽位占用者是 `active`、Inspect 也查得到，所以这个坑只能靠看像素发现）。
-   现在按壳自己打的标记决定偏移：存在 `document.documentElement[data-windows-titlebar]` 时用 `top:48px`（标题栏带下方），没有这个标记的壳（例如纯浏览器 profile）才用 `top:10px`。两种情形都有回归测试钉住。
+   而桌面壳自己的窗口标题栏带（最小化 / 最大化 / 关闭）占据顶部约 40px 并压在它上面：`top:10px` 时胶囊**在屏幕上完全看不见**（可槽位占用者仍是 `active`、Inspect 也查得到，所以这个坑只能靠看像素发现）；挪到标题栏带下方（`top:48px`）之后又**压住了头部那一排按钮**。
+   最终改为注册进头部自己的动作列表 `conversation.session.header.actions`（`order: -5`，正好夹在模式选择器 `agent-preset` 的 −10 与 `job-list` 的 20 之间）：原生流式排布、随窗口自适应、不覆盖任何控件，也不需要任何定位或点击穿透处理。
    > 排查经验：**Inspect 报「占用者 active」不等于「看得见」**。这次是靠 `windows_computer_use` 截图 + 裁剪放大才确认的；顺带一提，同一次 OCR 里能看到 `/net` 命令的说明文字，说明 host 半的注册面本来就在正常显示。
 
 ## 3. 配置
@@ -135,14 +134,14 @@ node dsh-net-switch\tools\verify-install.mjs      # 对运行中的 host 自检�
 | [lib/undici-loader.js](lib/undici-loader.js) | 四级 undici 解析（见第 2 节陷阱 2） |
 | [lib/detect.js](lib/detect.js) | 从 `verge.yaml` 读 `verge_mixed_port` / `enable_system_proxy` / `enable_tun_mode`（只读） |
 | [lib/state.js](lib/state.js) | 记住最后一次选择，原子写入，坏文件当作「没有偏好」 |
-| [client/client.js](client/client.js) | 浏览器半：手写 CJS bundle，注册到 `shell.overlay` 的胶囊 |
+| [client/client.js](client/client.js) | 浏览器半：手写 CJS bundle，注册到 `conversation.session.header.actions`（order −5，模式选择按钮右侧）的头部胶囊 |
 
 几个刻意的取舍：
 
 - **为什么必须有 undici**：实测过 `NODE_USE_ENV_PROXY` 只在**进程启动时**被 Node 读取——启动后改 `process.env` 对 `fetch` 完全无效（见 [probes/](probes/)）。所以运行时切换只能换全局 dispatcher。
 - **为什么不用 tsdown 构建客户端**：客户端半只有 `react` 一个外部模块，手写 `window.__ModuleLoader__.load` 包装即可，零构建链、零 devDependency，改完即可测。
 - **为什么状态存 `$DSH_HOME/storages/`**：`link:` 安装的插件目录可能只读或多人共享，状态属于用户环境而不是代码。
-- **`shell.overlay` 是点击穿透层**，所以胶囊显式设了 `pointerEvents: 'auto'`，否则点不动；它的 40px 窗口标题栏遮挡问题见第 2 节陷阱 3。
+- **开关挂在头部原生槽位，而不是浮层**：`conversation.session.header.actions` 是头部自己的动作列表，插进去就自动获得与模式选择器一致的排布、间距和窗口自适应；浮层带来的遮挡与点击穿透问题见第 2 节陷阱 3。
 - **探活用裸 TCP connect**，不是发一个走代理的请求：这样才能真的测「代理本身在不在」，而不会被直连路径答上来（这个写法来自 dsh-clash-proxy）。
 
 ## 5. 验证
@@ -154,8 +153,8 @@ node dsh-net-switch\tools\verify-install.mjs      # 对运行中的 host 自检�
 | `GET /dsh-net-switch/state` | 200；`mode=lan`、`proxySource=clash-verge:verge.yaml`（自动识别出混合端口 7897） |
 | `inProcessRouting` | `true` —— undici 7.30.0 已接管进程内 fetch |
 | 跨源 `POST /dsh-net-switch/mode`（`Origin: https://evil.example`） | **403** 拒绝 |
-| `shell.overlay` 的占用者 | `registrant=dsh-net-switch, id=dsh-net-switch, order=50, active=true` |
-| **真点右上角胶囊**（GUI → host 往返） | 点一下：`mode=lan → clash`、`lastChangeSource=gui`、胶囊变绿点 `代理`、子进程立刻拿到代理环境；再点一下：回到 `lan`、环境清空、状态文件落盘。两次点击 `switches=2` |
+| `conversation.session.header.actions` 的占用者 | `registrant=dsh-net-switch, id=dsh-net-switch, order=-5, active=true`（夹在 `agent-preset` −10 与 `job-list` 20 之间 = 模式选择按钮右侧） |
+| **真点头部胶囊**（GUI → host 往返） | 点一下：`mode=lan → clash`、`lastChangeSource=gui`、胶囊变绿点 `代理`、子进程立刻拿到代理环境；再点一下：回到 `lan`、环境清空、状态文件落盘。两次点击 `switches=2` |
 | `network_mode(mode=clash)` 后的子进程环境 | `HTTPS_PROXY`/`HTTP_PROXY`/`ALL_PROXY` = `http://127.0.0.1:7897`，`NO_PROXY` 9 条，`NODE_USE_ENV_PROXY=1` |
 | 同一 shell 里 `node fetch https://www.google.com/generate_204` | **204**（切换前是超时失败） |
 | 切回 `lan` 之后 | 5 个环境变量全部清空、google 重新失败、状态文件落盘 `mode=lan` |
@@ -167,9 +166,9 @@ node dsh-net-switch\tools\verify-install.mjs      # 对运行中的 host 自检�
 node tools\verify-install.mjs        # 对运行中的 host 自检（默认 http://127.0.0.1:19387）
 ```
 
-会核对：host 半是否加载、**进程内路由是否真的接管**、代理是否可达、私网绕过是否齐全、跨源 POST 是否被拒，以及浏览器半的组合输入（`dsh.client` 声明、`exports["./client"]`、bundle 的 loader 包装与 id、`shell.overlay` 注册）。
+会核对：host 半是否加载、**进程内路由是否真的接管**、代理是否可达、私网绕过是否齐全、跨源 POST 是否被拒，以及浏览器半的组合输入（`dsh.client` 声明、`exports["./client"]`、bundle 的 loader 包装与 id、`conversation.session.header.actions` 注册）。
 
-> 浏览器 bundle 不能靠未认证 HTTP 核验：DSH 用 **combo + 版本号**提供客户端包，而 web 面在**每进程启动令牌**后面（只经 IPC 给桌面壳）。实测把 URL 猜成 `/plugins/<id>/client.js?rev=…` 时，**连已知能正常渲染的插件（task board、market、billing）也一样 404**，所以那种 404 不构成证据。工具因此只校验组合输入，实际是否渲染请用 Inspect 桥（问 `shell.overlay` 的占用者）或直接看右上角。
+> 浏览器 bundle 不能靠未认证 HTTP 核验：DSH 用 **combo + 版本号**提供客户端包，而 web 面在**每进程启动令牌**后面（只经 IPC 给桌面壳）。实测把 URL 猜成 `/plugins/<id>/client.js?rev=…` 时，**连已知能正常渲染的插件（task board、market、billing）也一样 404**，所以那种 404 不构成证据。工具因此只校验组合输入，实际是否渲染请用 Inspect 桥（问 `conversation.session.header.actions` 的占用者）或直接看会话头部。
 
 ### 测试
 
@@ -188,7 +187,7 @@ node --test --test-isolation=none test/policy.test.mjs test/routing.test.mjs tes
 |---|---|
 | [test/policy.test.mjs](test/policy.test.mjs) | CIDR/主机名/通配 匹配边界（`172.15` vs `172.16`、`notexample.com` 不算子域）、SOCKS/PAC 拒绝、环境变量精确还原、状态文件往返与损坏容错 |
 | [test/routing.test.mjs](test/routing.test.mjs) | **端到端**：真起一个会答 CONNECT 的假代理，用进程级 `fetch` 断言「公网 → 走代理（CONNECT 隧道）」「回环/私网 → 绕过直连」、切换后环境还原且不再触达代理、卸载后原 dispatcher 回归；代理不可达时失败开放 + `degraded` 上报；`autoFallback:false` 不被覆盖 |
-| [test/client.test.mjs](test/client.test.mjs) | 载入真实 bundle，用最小 React hook 运行时渲染胶囊：注册进 `shell.overlay`、`pointerEvents: 'auto'`、`直连`/`代理`/`代理离线` 三种呈现、点击后 POST 的 body 是 `{"mode":"clash"}` |
+| [test/client.test.mjs](test/client.test.mjs) | 载入真实 bundle，用最小 React hook 运行时渲染胶囊：注册进 `conversation.session.header.actions`、order 必须落在 `agent-preset`(−10) 与 `job-list`(20) 之间、**不做任何定位**、hover 只改配色不移动、`直连`/`代理`/`代理离线` 三种呈现、点击后 POST 的 body 是 `{"mode":"clash"}` |
 | [test/plugin.test.mjs](test/plugin.test.mjs) | 用假 Cordis 上下文跑真 `apply()`：dispatcher 真正接管 `fetch`、两个路由与工具/命令按契约注册、403/405/400 栅栏、工具与命令行为、卸载还原 |
 
 ### 一次性实验（把设计假设钉死，可重跑）

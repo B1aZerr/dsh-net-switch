@@ -20,8 +20,8 @@ url: https://github.com/B1aZerr/dsh-net-switch
 name: B1aZerr/dsh-net-switch
 category: remote
 description:
-  en: "Switches Harness's own outbound traffic between a local Clash Verge proxy and direct/LAN at runtime, from a status pill, a network_mode agent tool or a /net command."
-  zh: "在「走本地 Clash Verge 代理」与「直连（含局域网）」之间运行时切换 Harness 自己的出网，入口是右上角状态胶囊、network_mode 工具与 /net 命令。"
+  en: "Switches Harness's own outbound traffic between a local Clash Verge proxy and direct/LAN at runtime, from a status chip in the session header next to the mode selector, a network_mode agent tool or a /net command."
+  zh: "在「走本地 Clash Verge 代理」与「直连（含局域网）」之间运行时切换 Harness 自己的出网，入口是会话头部（紧邻模式选择按钮）的状态胶囊、network_mode 工具与 /net 命令。"
 # Prebuilt install: the asset name carries no version, so `latest/download`
 # keeps resolving after every future release instead of 404ing.
 tarball: https://github.com/B1aZerr/dsh-net-switch/releases/latest/download/dsh-net-switch.tgz

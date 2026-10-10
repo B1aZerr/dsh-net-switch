@@ -24,12 +24,12 @@ reads the launch environment), and ignores the Windows system proxy — so chang
 route otherwise means editing environment variables and restarting. This plugin replaces
 the process-global undici dispatcher with one that decides per request, so `clash`
 (through a local Clash Verge proxy) and `lan` (direct) can be flipped at runtime and
-reverted, from a status pill in the top-right of the web GUI, a `network_mode` agent
-tool, or `/net`. The same flip rewrites child-process proxy variables, so `git`, `curl`
-and `npm` follow the same route. Loopback and every private range
-(`10/8`, `172.16/12`, `192.168/16`, `169.254/16`) always stay direct; the last choice is
-persisted; an unreachable proxy fails open but keeps reporting `degraded: true` instead
-of silently pretending to be connected.
+reverted, from a status chip that sits in the session header immediately right of the
+mode selector, a `network_mode` agent tool, or `/net`. The same flip rewrites
+child-process proxy variables, so `git`, `curl` and `npm` follow the same route. Loopback
+and every private range (`10/8`, `172.16/12`, `192.168/16`, `169.254/16`) always stay
+direct; the last choice is persisted; an unreachable proxy fails open but keeps reporting
+`degraded: true` instead of silently pretending to be connected.
 
 **Overlap with an existing entry.** `Lunatic029/dsh-clash-proxy` is already listed and is
 the closest neighbour, so here is the difference rather than a claim to the same slot: it
@@ -44,12 +44,14 @@ happy to have it re-filed if you would rather it live elsewhere.
 
 **Checks.** `package.json` declares `dsh.bundle` (`patch: ./cordis.patch.yml`) and
 `dsh.client` (`platform: web`); the `dsh-plugin` topic is set. Verified end to end on DSH
-Desktop 0.2.0-rc.2 against Clash Verge Rev on `127.0.0.1:7897`: clicking the pill moves
+Desktop 0.2.0-rc.2 against Clash Verge Rev on `127.0.0.1:7897`: clicking the chip moves
 `lan → clash → lan` with `lastChangeSource=gui`, agent shells gain and then lose
 `HTTP(S)_PROXY` / `NO_PROXY` / `NODE_USE_ENV_PROXY`, a direct
 `fetch('https://www.google.com/generate_204')` goes from timeout to `204` through the
 proxy, and 21 tests pass — including a real CONNECT proxy driving process-global `fetch`
-to prove the routing itself.
+to prove the routing itself. The chip registers into `conversation.session.header.actions`
+at `order: -5`, between the shipped `agent-preset` (-10) and `job-list` (20) entries, so it
+is laid out in the header's own flow rather than positioned over the UI.
 
 在「走本地 Clash Verge 代理」与「直连（含局域网）」之间运行时切换 Harness 自己的出网；
 与已收录的 `dsh-clash-proxy` 的区别是「运行时双向可切 + 三个入口」，而不是启动时定死。

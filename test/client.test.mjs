@@ -1,8 +1,9 @@
 /**
  * Behavioral test for the browser half. DSH serves this file to the page, so the
  * test loads the real bundle, drives it through a minimal hook runtime standing in
- * for React, and checks the two things that break silently in a real GUI: the
- * click-through `shell.overlay` opt-in, and the mode the click actually posts.
+ * for React, and checks the things that break silently in a real GUI: the header
+ * seat it registers into and its order relative to the mode selector, that it never
+ * positions itself over the UI, and the mode the click actually posts.
  */
 
 import assert from 'node:assert/strict'
@@ -126,7 +127,7 @@ function stubGlobals(statePayload) {
   }
 }
 
-test('the pill registers into shell.overlay, opts into pointer events, and posts the opposite mode', async () => {
+test('the chip registers into the header action list, right of the mode selector, and posts the opposite mode', async () => {
   const definition = await loadBundle()
   assert.equal(definition.id, 'dsh-net-switch')
 
@@ -175,19 +176,38 @@ test('the pill registers into shell.overlay, opts into pointer events, and posts
       },
     })
 
-    assert.deepEqual(injections, ['shell.overlay'], 'the frame-wide overlay is the right seat')
+    assert.deepEqual(
+      injections,
+      ['conversation.session.header.actions'],
+      'the header action list is the seat that reflows with the Session header',
+    )
     assert.equal(registrations.length, 1)
-    assert.equal(registrations[0].options.name, 'shell.overlay')
+    assert.equal(registrations[0].options.name, 'conversation.session.header.actions')
     assert.equal(registrations[0].options.id, 'dsh-net-switch')
+    // The chip must land immediately right of the mode selector. In this list the
+    // shipped entries are subagent-catalog (-30), agent-team (-20),
+    // agent-preset (-10, the mode selector) and job-list (20); asserting the
+    // window rather than the literal -5 catches an upstream reorder instead of
+    // silently drifting to the end of the row.
+    assert.ok(
+      registrations[0].options.order > -10 && registrations[0].options.order < 20,
+      `order ${registrations[0].options.order} must fall between agent-preset (-10) and job-list (20)`,
+    )
 
     // First paint, before the state request settles.
     const first = runtime.render(registrations[0].component)
     const button = findByType(first, 'button')
-    assert.ok(button, 'the pill is a button')
-    assert.equal(button.props.style.pointerEvents, 'auto', 'the overlay is click-through, so the pill must opt back in')
-    assert.equal(button.props.style.position, 'fixed')
+    assert.ok(button, 'the chip is a button')
     assert.deepEqual(textsOf(first), ['网络…'])
-    assert.equal(stub.intervals.length, 1, 'the pill polls the host route')
+    // Laid out in flow, sized like the chips beside it — never positioned over the
+    // UI. That is the whole point of registering into a native header slot.
+    assert.equal(button.props.style.position, undefined, 'no fixed/absolute positioning')
+    assert.equal(button.props.style.top, undefined)
+    assert.equal(button.props.style.right, undefined)
+    assert.equal(button.props.style.zIndex, undefined)
+    assert.equal(button.props.style.display, 'inline-flex')
+    assert.equal(button.props.style.height, '24px')
+    assert.equal(stub.intervals.length, 1, 'the chip polls the host route')
 
     // The poll lands: mode lan reads as direct.
     await flush()
@@ -250,54 +270,19 @@ test('a selected-but-unreachable proxy is presented as degraded', async () => {
   }
 })
 
-test('the floating pill clears the desktop titlebar band', async () => {
+test('hover restyles the chip without moving it', async () => {
   const definition = await loadBundle()
-  const statePayload = {
+  const stub = stubGlobals({
     current: {
-      mode: 'lan',
-      effective: 'lan',
+      mode: 'clash',
+      effective: 'clash',
       reachable: true,
       degraded: false,
       proxy: 'http://127.0.0.1:7897',
       inProcessRouting: true,
     },
     next: null,
-  }
-  const stub = stubGlobals(statePayload)
-  const runtime = createReactStub()
-
-  // The desktop shell marks the document when its window-chrome band exists — the
-  // band that owns min/max/close in the top-right corner and paints over the top
-  // ~40px of the frame. A pill at top:10px was hidden completely under those
-  // buttons; this test pins the offset that keeps it visible.
-  globalThis.document = {
-    documentElement: { hasAttribute: (name) => name === 'data-windows-titlebar' },
-  }
-  try {
-    const exportsObject = definition.factory(() => runtime.React)
-    const registrations = []
-    exportsObject.apply({
-      slots: {
-        inject(_key, callback) { callback() },
-        register(options, component) { registrations.push({ options, component }); return () => {} },
-      },
-    })
-
-    const floating = findByType(runtime.render(registrations[0].component), 'button')
-    assert.equal(floating.props.style.top, '48px', 'must clear the ~40px window-chrome band')
-    assert.equal(floating.props.style.right, '12px')
-    assert.equal(floating.props.style.position, 'fixed')
-
-    for (const cleanup of runtime.cleanups) cleanup()
-  } finally {
-    delete globalThis.document
-    stub.restore()
-  }
-})
-
-test('without the desktop titlebar band the pill may sit higher', async () => {
-  const definition = await loadBundle()
-  const stub = stubGlobals({ current: { mode: 'lan', effective: 'lan', reachable: true, degraded: false, inProcessRouting: true }, next: null })
+  })
   const runtime = createReactStub()
   try {
     const exportsObject = definition.factory(() => runtime.React)
@@ -308,8 +293,19 @@ test('without the desktop titlebar band the pill may sit higher', async () => {
         register(options, component) { registration = { options, component }; return () => {} },
       },
     })
-    const button = findByType(runtime.render(registration.component), 'button')
-    assert.equal(button.props.style.top, '10px')
+
+    const rest = findByType(runtime.render(registration.component), 'button')
+    const restBackground = rest.props.style.background
+
+    rest.props.onMouseEnter()
+    const hovered = findByType(runtime.rerender(), 'button')
+    assert.notEqual(hovered.props.style.background, restBackground, 'hover changes the surface')
+    assert.equal(hovered.props.style.position, undefined, 'and never becomes positioned')
+    assert.equal(hovered.props.style.top, undefined)
+
+    hovered.props.onMouseLeave()
+    const left = findByType(runtime.rerender(), 'button')
+    assert.equal(left.props.style.background, restBackground, 'leaving restores it')
 
     for (const cleanup of runtime.cleanups) cleanup()
   } finally {

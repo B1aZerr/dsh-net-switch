@@ -5,7 +5,8 @@
 # the host process — it owns the switchable undici dispatcher, the child-process
 # proxy environment, the state route, the agent tool and the /net command — and
 # the `dsh.client` declaration in package.json makes the browser half
-# (exports "./client") load in the web GUI as the top-right toggle pill.
+# (exports "./client") load in the web GUI as the network chip in the session
+# header, immediately right of the mode selector.
 - insert:
     - id: net-switch
       name: 'dsh-net-switch'

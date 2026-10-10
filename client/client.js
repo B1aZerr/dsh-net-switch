@@ -1,17 +1,23 @@
 /**
  * dsh-net-switch — browser half.
  *
- * A status pill in the top-right of the window chrome: green `代理` (through
- * Clash), grey `直连`, amber `代理离线` (Clash selected but unreachable, so the
- * host fell back to direct). Clicking it posts the opposite mode to the host.
+ * A status chip inside the Session header, immediately to the right of the
+ * agent-preset (mode) chip: green `代理` (through Clash), grey `直连`, amber
+ * `代理离线` (Clash selected but unreachable, so the host fell back to direct).
+ * Clicking it posts the opposite mode to the host.
  *
- * Placement is deliberate. `shell.overlay` is
- * `position: absolute; inset: 0; z-index: 20; pointer-events: none`, and the
- * desktop shell's own window-chrome band owns min/max/close across the top ~40px
- * and paints over it. A pill at `top: 10px` was therefore completely invisible
- * under those buttons, so the offset follows the band: the shell marks
- * `document.documentElement[data-windows-titlebar]` when the band exists, and the
- * pill starts below it. `top: 10px` remains correct for a shell without the band.
+ * Why this seat. `conversation.session.header.actions` is the header's own
+ * "title-adjacent Session actions" list. The shipped entries there are
+ * `subagent-catalog` (-30), `agent-team` (-20), `agent-preset` (-10) and
+ * `job-list` (20), so registering at -5 puts this chip directly right of the mode
+ * selector without touching any of them, and the header lays it out in normal
+ * flow — it reflows with the window instead of hovering over the UI.
+ *
+ * The earlier revision floated in `shell.overlay`, which is
+ * `position: absolute; inset: 0; z-index: 20; pointer-events: none` and sits
+ * *under* the desktop shell's window-chrome band (min/max/close across the top
+ * ~40px). A fixed pill there was invisible at `top: 10px` and covered the header
+ * controls when moved below the band. A native list seat has neither problem.
  *
  * This file is a hand-written CommonJS bundle in the shape the DSH client module
  * loader expects (`window.__ModuleLoader__.load`), which keeps the plugin free of
@@ -35,54 +41,51 @@ window.__ModuleLoader__.load({
     const MODE_URL = '/dsh-net-switch/mode'
     const POLL_MS = 3000
 
-    /** Roughly the height of the desktop window-chrome band. */
-    const TITLEBAR_CLEARANCE_PX = 48
+    /** The header's title-adjacent action list — the row the mode chip lives in. */
+    const HEADER_ACTIONS_SLOT = 'conversation.session.header.actions'
+    /**
+     * Between `agent-preset` (order -10, the mode selector) and `job-list`
+     * (order 20). Two neighbours are asserted in the client test so a future
+     * reordering upstream is caught rather than silently moving this chip.
+     */
+    const HEADER_ACTIONS_ORDER = -5
 
     const TOKEN_SUCCESS = 'var(--dsw-alias-state-success-primary)'
     const TOKEN_WARN = 'var(--dsw-alias-state-warn-primary)'
     const TOKEN_IDLE = 'var(--dsw-alias-state-idle-primary)'
     const TOKEN_ERROR = 'var(--dsw-alias-state-error-primary)'
 
-    const BASE_STYLE = {
+    /** Sized and shaped like the header chips it sits beside. */
+    const CHIP_STYLE = {
       display: 'inline-flex',
       alignItems: 'center',
       gap: '6px',
-      padding: '3px 10px',
-      borderRadius: '999px',
+      height: '24px',
+      padding: '0 8px',
+      borderRadius: '6px',
       border: '1px solid var(--dsw-alias-border-l1)',
       background: 'var(--dsw-alias-bg-layer-1)',
-      color: 'var(--dsw-alias-label-primary)',
+      color: 'var(--dsw-alias-label-secondary)',
       font: 'inherit',
       fontSize: '12px',
-      lineHeight: '18px',
+      lineHeight: '1',
       whiteSpace: 'nowrap',
       cursor: 'pointer',
-      pointerEvents: 'auto',
       userSelect: 'none',
-      boxShadow: '0 1px 4px rgba(0, 0, 0, 0.12)',
-      transition: 'opacity 120ms ease',
-      position: 'fixed',
-      right: '12px',
-      zIndex: 60,
-    }
-
-    function hasWindowTitlebar() {
-      return typeof document !== 'undefined'
-        && document.documentElement !== null
-        && document.documentElement.hasAttribute('data-windows-titlebar')
+      transition: 'background 120ms ease, opacity 120ms ease',
     }
 
     function dotStyle(color) {
       return {
-        width: '8px',
-        height: '8px',
+        width: '7px',
+        height: '7px',
         borderRadius: '50%',
         background: color,
         flex: '0 0 auto',
       }
     }
 
-    /** Derive the pill's presentation from one host status payload. */
+    /** Derive the chip's presentation from one host status payload. */
     function presentation(status) {
       if (status === null || status === undefined) {
         return { text: '网络…', color: TOKEN_IDLE, title: '正在读取 Harness 出网状态' }
@@ -115,9 +118,10 @@ window.__ModuleLoader__.load({
       }
     }
 
-    function NetSwitchPill() {
+    function NetSwitchChip() {
       const [status, setStatus] = React.useState(null)
       const [busy, setBusy] = React.useState(false)
+      const [hovered, setHovered] = React.useState(false)
 
       React.useEffect(() => {
         let alive = true
@@ -138,8 +142,9 @@ window.__ModuleLoader__.load({
       }, [])
 
       const view = presentation(status)
-      const style = Object.assign({}, BASE_STYLE, {
-        top: hasWindowTitlebar() ? `${TITLEBAR_CLEARANCE_PX}px` : '10px',
+      const style = Object.assign({}, CHIP_STYLE, {
+        background: hovered && !busy ? 'var(--dsw-alias-bg-layer-2)' : CHIP_STYLE.background,
+        color: hovered && !busy ? 'var(--dsw-alias-label-primary)' : CHIP_STYLE.color,
         opacity: busy ? 0.6 : 1,
       })
 
@@ -167,6 +172,8 @@ window.__ModuleLoader__.load({
           style,
           title: view.title,
           onClick,
+          onMouseEnter: () => setHovered(true),
+          onMouseLeave: () => setHovered(false),
           'aria-label': view.title,
         },
         h('span', { style: dotStyle(view.color) }),
@@ -178,10 +185,15 @@ window.__ModuleLoader__.load({
     exports.inject = ['slots']
 
     exports.apply = function apply(ctx) {
-      ctx.slots.inject('shell.overlay', () =>
+      ctx.slots.inject(HEADER_ACTIONS_SLOT, () =>
         ctx.slots.register(
-          { name: 'shell.overlay', id: 'dsh-net-switch', order: 50, label: () => 'net switch' },
-          () => h(NetSwitchPill),
+          {
+            name: HEADER_ACTIONS_SLOT,
+            id: 'dsh-net-switch',
+            order: HEADER_ACTIONS_ORDER,
+            label: () => 'net switch',
+          },
+          () => h(NetSwitchChip),
         ),
       )
     }
