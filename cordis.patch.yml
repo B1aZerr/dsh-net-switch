@@ -1,0 +1,11 @@
+# dsh-net-switch bundle patch: inserts the dual-face plugin row into the profile
+# roster (a loader patch entry list, applied as a bundle layer over dsh-base).
+#
+# The row is a bare plugin by package name: the node half (exports ".") runs in
+# the host process — it owns the switchable undici dispatcher, the child-process
+# proxy environment, the state route, the agent tool and the /net command — and
+# the `dsh.client` declaration in package.json makes the browser half
+# (exports "./client") load in the web GUI as the top-right toggle pill.
+- insert:
+    - id: net-switch
+      name: 'dsh-net-switch'

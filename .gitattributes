@@ -1,0 +1,5 @@
+# Keep the tree byte-identical across platforms: these are all JavaScript, JSON
+# and YAML sources, and a CRLF checkout would show up as a full-file diff.
+* text=auto eol=lf
+*.png binary
+*.tgz binary

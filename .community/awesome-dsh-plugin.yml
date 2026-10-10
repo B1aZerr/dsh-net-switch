@@ -1,0 +1,20 @@
+# Ready-to-submit entry for the awesome-dsh-plugin list.
+#
+# That list takes one pull request that adds exactly one file, named after the
+# repository:
+#
+#     data/plugins/B1aZerr__dsh-net-switch.yml
+#
+# Copy this file to that path and open the pull request. Nothing else there is
+# edited by hand: both READMEs are generated from data/plugins/*.yml.
+#
+# Its CI checks, in order: at most 3 entries per PR; a `dsh.bundle` manifest in
+# the target repository's package.json; the repository is at least one day old;
+# awesome-lint and the site build. So submit at least a day after the repository
+# was created — an earlier PR is rejected on the age check alone.
+url: https://github.com/B1aZerr/dsh-net-switch
+name: B1aZerr/dsh-net-switch
+category: tools
+description:
+  en: 'Runtime switch for Harness''s own outbound traffic between a local Clash Verge proxy and direct/LAN, with a top-right status pill, a network_mode agent tool and a /net command.'
+  zh: '在「走本地 Clash Verge 代理」与「直连（含局域网）」之间运行时切换 Harness 自己的出网，并提供右上角状态胶囊、network_mode 工具与 /net 命令。'

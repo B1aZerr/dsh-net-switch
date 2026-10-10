@@ -1,0 +1,11 @@
+# Local install shims and build leftovers.
+node_modules/
+
+# Packed artifacts (built with `tar -czf`, not committed).
+*.tgz
+.pack/
+
+# Editor / OS noise.
+.DS_Store
+Thumbs.db
+*.log

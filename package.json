@@ -1,0 +1,64 @@
+{
+  "name": "dsh-net-switch",
+  "version": "0.1.0",
+  "description": "Runtime network switch for DeepSeek Harness: flip Harness's own outbound traffic between a local Clash Verge proxy and direct/LAN without restarting, from a top-right pill, the network_mode agent tool and the /net command.",
+  "license": "MIT",
+  "author": "B1aZerr",
+  "homepage": "https://github.com/B1aZerr/dsh-net-switch#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/B1aZerr/dsh-net-switch.git"
+  },
+  "bugs": {
+    "url": "https://github.com/B1aZerr/dsh-net-switch/issues"
+  },
+  "keywords": [
+    "deepseek",
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "cordis",
+    "proxy",
+    "clash",
+    "network"
+  ],
+  "type": "module",
+  "main": "lib/plugin.js",
+  "exports": {
+    ".": "./lib/plugin.js",
+    "./client": "./client/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "client",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "engines": {
+      "dsh": ">=0.2.0-rc.2"
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots"
+      ]
+    }
+  },
+  "dependencies": {
+    "undici": "^7.28.0"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0"
+  },
+  "scripts": {
+    "setup": "node tools/link-undici.mjs",
+    "test": "node --test --test-isolation=none test/policy.test.mjs test/routing.test.mjs test/client.test.mjs test/plugin.test.mjs",
+    "probe": "node probes/env-dynamic-probe.mjs && node probes/undici-interop-probe.mjs"
+  }
+}
